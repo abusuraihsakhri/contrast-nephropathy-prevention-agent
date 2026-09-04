@@ -8,3 +8,23 @@ output.csv
 dist/
 build/
 *.egg-info/
+
+# Project-specific output files
+out_smoke.csv
+cin_results.csv
+
+# Environment files
+.env
+.env.local
+.venv/
+venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

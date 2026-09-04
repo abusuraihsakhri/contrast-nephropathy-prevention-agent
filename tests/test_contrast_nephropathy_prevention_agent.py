@@ -3,9 +3,13 @@ Automated Pytest Test Suite for Contrast Nephropathy Prevention Agent.
 Domain: Cardiology & Intensive Care Systems
 Standard: AHA/ACC Guidelines / Surviving Sepsis Campaign
 """
+import os
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Initialize audit logger with test key before importing modules that use it
+os.environ.setdefault("AUDIT_SECRET_KEY", "test-audit-key-for-unit-tests-only")
 
 import pytest
 from agents.base import PHIGuard, AuditLogger, SecurityException

@@ -20,6 +20,35 @@ from dataclasses import dataclass, field, asdict
 from typing import Dict, Any, List, Optional, Tuple
 
 
+class ValidationError(ValueError):
+    """Raised when input parameters fail validation checks."""
+    pass
+
+
+def _validate_positive_number(value: float, name: str, allow_zero: bool = False) -> None:
+    """Validate that a numeric parameter is positive (or non-negative if allow_zero)."""
+    if value is None:
+        return
+    if not isinstance(value, (int, float)):
+        raise ValidationError(f"{name} must be a number, got {type(value).__name__}")
+    if math.isnan(value) or math.isinf(value):
+        raise ValidationError(f"{name} must be finite, got {value}")
+    if allow_zero:
+        if value < 0:
+            raise ValidationError(f"{name} must be non-negative, got {value}")
+    else:
+        if value <= 0:
+            raise ValidationError(f"{name} must be positive, got {value}")
+
+
+def _validate_age(value: int) -> None:
+    """Validate age is within reasonable clinical bounds."""
+    if not isinstance(value, int):
+        raise ValidationError(f"age_years must be an integer, got {type(value).__name__}")
+    if value < 0 or value > 150:
+        raise ValidationError(f"age_years must be between 0 and 150, got {value}")
+
+
 @dataclass
 class MehranScoreResult:
     """Mehran Risk Score assessment for Contrast-Induced Nephropathy."""
@@ -113,6 +142,12 @@ class CINGuardEngine:
               - If eGFR provided: >=60: 0, 40-59: +2, 20-39: +4, <20: +6
               - If only Creatinine provided: > 1.5 mg/dL: +4
         """
+        _validate_age(age_years)
+        _validate_positive_number(contrast_volume_ml, "contrast_volume_ml", allow_zero=True)
+        _validate_positive_number(serum_creatinine_mg_dl, "serum_creatinine_mg_dl")
+        if egfr_ml_min is not None:
+            _validate_positive_number(egfr_ml_min, "egfr_ml_min", allow_zero=True)
+
         score = 0
         factors = []
         breakdown = {}
@@ -214,6 +249,11 @@ class CINGuardEngine:
         MCD = (5 mL * Weight in kg) / Serum Creatinine (mg/dL)
         Contrast / eGFR Ratio threshold: 3.7 (or 3.0 in severe CKD)
         """
+        _validate_positive_number(contrast_volume_ml, "contrast_volume_ml", allow_zero=True)
+        _validate_positive_number(weight_kg, "weight_kg")
+        _validate_positive_number(serum_creatinine_mg_dl, "serum_creatinine_mg_dl")
+        _validate_positive_number(egfr_ml_min, "egfr_ml_min", allow_zero=True)
+
         scr = max(0.4, serum_creatinine_mg_dl)
         mcd = (5.0 * weight_kg) / scr
         ratio = contrast_volume_ml / max(1.0, egfr_ml_min)
@@ -254,6 +294,10 @@ class CINGuardEngine:
         Urgent Saline: 3.0 mL/kg/h for 1-2h pre & 1.5 mL/kg/h for 4-6h post.
         Bicarbonate (154 mEq/L): 3.0 mL/kg/h for 1h pre & 1.0 mL/kg/h for 6h post.
         """
+        _validate_positive_number(weight_kg, "weight_kg")
+        if preferred_fluid.upper() not in ("SALINE", "BICARBONATE"):
+            raise ValidationError(f"preferred_fluid must be 'SALINE' or 'BICARBONATE', got '{preferred_fluid}'")
+
         special = []
         if congestive_heart_failure:
             special.append("CHF active: Volume reduction applied (0.5 mL/kg/h) with strict pulmonary edema monitoring.")
@@ -361,6 +405,9 @@ class CINGuardEngine:
         medications: Optional[List[str]] = None,
     ) -> CINGuardReport:
         """Run complete end-to-end CIN Risk, Contrast Safety & Hydration Protocol evaluation."""
+        if not patient_id or not isinstance(patient_id, str):
+            raise ValidationError("patient_id must be a non-empty string")
+
         mehran = cls.calculate_mehran_score(
             hypotension=hypotension,
             iabp=iabp,

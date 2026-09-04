@@ -14,6 +14,7 @@ from cin_guard import (
     MedicationAdjustmentRecommendation,
     CINGuardReport,
     main,
+    ValidationError,
 )
 
 
@@ -222,6 +223,61 @@ class TestCINGuardEndToEnd(unittest.TestCase):
     def test_cli_execution(self):
         self.assertEqual(main(["audit", "--patient-id", "CLI-TEST", "--contrast-volume", "120"]), 0)
         self.assertEqual(main(["chat", "What", "is", "the", "mehran", "score?"]), 0)
+
+
+class TestInputValidation(unittest.TestCase):
+    """Test suite for input validation in CINGuardEngine."""
+
+    def test_negative_contrast_volume_rejected(self):
+        with self.assertRaises(ValidationError):
+            CINGuardEngine.calculate_mehran_score(contrast_volume_ml=-50.0)
+
+    def test_negative_weight_rejected(self):
+        with self.assertRaises(ValidationError):
+            CINGuardEngine.calculate_contrast_safety_limits(
+                contrast_volume_ml=100.0,
+                weight_kg=-70.0,
+                serum_creatinine_mg_dl=1.0,
+                egfr_ml_min=60.0,
+            )
+
+    def test_negative_creatinine_rejected(self):
+        with self.assertRaises(ValidationError):
+            CINGuardEngine.calculate_mehran_score(serum_creatinine_mg_dl=-1.0)
+
+    def test_invalid_age_rejected(self):
+        with self.assertRaises(ValidationError):
+            CINGuardEngine.calculate_mehran_score(age_years=200)
+
+    def test_negative_age_rejected(self):
+        with self.assertRaises(ValidationError):
+            CINGuardEngine.calculate_mehran_score(age_years=-5)
+
+    def test_invalid_fluid_type_rejected(self):
+        with self.assertRaises(ValidationError):
+            CINGuardEngine.generate_hydration_protocol(weight_kg=70.0, preferred_fluid="INVALID")
+
+    def test_nan_input_rejected(self):
+        with self.assertRaises(ValidationError):
+            CINGuardEngine.calculate_mehran_score(contrast_volume_ml=float("nan"))
+
+    def test_inf_input_rejected(self):
+        with self.assertRaises(ValidationError):
+            CINGuardEngine.calculate_mehran_score(contrast_volume_ml=float("inf"))
+
+    def test_empty_patient_id_rejected(self):
+        with self.assertRaises(ValidationError):
+            CINGuardEngine.evaluate_case(patient_id="")
+
+    def test_valid_inputs_accepted(self):
+        # Should not raise
+        res = CINGuardEngine.calculate_mehran_score(
+            age_years=65,
+            contrast_volume_ml=100.0,
+            serum_creatinine_mg_dl=1.0,
+            egfr_ml_min=60.0,
+        )
+        self.assertIsInstance(res, MehranScoreResult)
 
 
 if __name__ == "__main__":
