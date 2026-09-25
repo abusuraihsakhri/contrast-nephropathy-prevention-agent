@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
     env:
       AUDIT_SECRET_KEY: ci-test-only-audit-key
 
@@ -37,6 +37,9 @@ jobs:
       - name: Compile
         run: python -m compileall -q cin_guard.py contrast_nephropathy_prevention_agent agents enrichment.py cli.py
 
+      - name: Check browser JavaScript
+        run: node --check web/app.js
+
       - name: Test
         run: pytest -q
 
@@ -52,3 +55,18 @@ jobs:
       - name: Secret regression check
         run: |
           ! grep -R --line-number --exclude-dir=.git "contrast-nephropathy-prevention-engine-prod-audit-key-2026" .
+
+      - name: Docker smoke test
+        if: matrix.python-version == '3.12'
+        run: |
+          docker build -t contrast-nephropathy-prevention-agent:ci .
+          docker run -d --name caki-ci -p 8000:8000 contrast-nephropathy-prevention-agent:ci
+          trap 'docker rm -f caki-ci >/dev/null 2>&1 || true' EXIT
+          for attempt in {1..20}; do
+            if curl -fsS http://127.0.0.1:8000/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8000/health
+          curl -fsS -H "Content-Type: application/json" -d @sample_payload.json http://127.0.0.1:8000/api/evaluate | python -m json.tool >/dev/null
