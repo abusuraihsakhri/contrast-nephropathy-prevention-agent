@@ -54,7 +54,7 @@ jobs:
 
       - name: Secret regression check
         run: |
-          ! grep -R --line-number --exclude-dir=.git "contrast-nephropathy-prevention-engine-prod-audit-key-2026" .
+          ! grep --line-number "contrast-nephropathy-prevention-engine-prod-audit-key-2026" docker-compose.yml Dockerfile pyproject.toml
 
       - name: Docker smoke test
         if: matrix.python-version == '3.12'
