@@ -56,6 +56,13 @@ jobs:
         run: |
           ! grep --line-number "contrast-nephropathy-prevention-engine-prod-audit-key-2026" docker-compose.yml Dockerfile pyproject.toml
 
+      - name: Dependency and static security audit
+        if: matrix.python-version == '3.12'
+        run: |
+          python -m pip install pip-audit bandit
+          pip-audit
+          bandit -q -r cin_guard.py contrast_nephropathy_prevention_agent
+
       - name: Docker smoke test
         if: matrix.python-version == '3.12'
         run: |
