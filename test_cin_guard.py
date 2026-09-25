@@ -185,18 +185,18 @@ class TestMedicationAudit(unittest.TestCase):
         recs = CINGuardEngine.audit_medications(["Metformin 1000mg BID", "Atorvastatin 40mg"])
         self.assertEqual(len(recs), 1)
         self.assertEqual(recs[0].drug_name, "Metformin")
-        self.assertEqual(recs[0].action, "HOLD_DAY_OF")
+        self.assertEqual(recs[0].action, "REVIEW_RENAL_FUNCTION")
 
     def test_nsaid_and_acei_holds(self):
         recs = CINGuardEngine.audit_medications(["Ibuprofen 600mg", "Lisinopril 10mg"])
         actions = {r.drug_name: r.action for r in recs}
         self.assertIn("Ibuprofen 600Mg", actions)
-        self.assertEqual(actions["Ibuprofen 600Mg"], "HOLD_48H_PRE")
-        self.assertEqual(actions["Lisinopril 10Mg"], "HOLD_DAY_OF")
+        self.assertEqual(actions["Ibuprofen 600Mg"], "CONSIDER_HOLD_IF_HIGH_RISK")
+        self.assertEqual(actions["Lisinopril 10Mg"], "INDIVIDUALIZE")
 
     def test_aminoglycoside_monitoring(self):
         recs = CINGuardEngine.audit_medications(["Gentamicin IV"])
-        self.assertEqual(recs[0].action, "MONITOR")
+        self.assertEqual(recs[0].action, "REVIEW_NEPHROTOXIN")
 
 
 class TestCINGuardEndToEnd(unittest.TestCase):
