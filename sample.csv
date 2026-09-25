@@ -1,4 +1,4 @@
-case_id,patient_synthetic_id,metric_primary,metric_secondary,is_stat,status_flag
-CASE-001,SYNTH-01,25.4,14.2,True,DISCORDANT
-CASE-002,SYNTH-02,12.0,4.1,False,NORMAL
-CASE-003,SYNTH-03,32.0,18.5,True,SUSPICIOUS
+patient_id,weight_kg,age_years,serum_creatinine_mg_dl,egfr_ml_min,contrast_volume_ml,hypotension,iabp,congestive_heart_failure,anemia,diabetes,is_urgent,preferred_fluid,medications
+PT-001,70,68,1.3,52,160,false,false,false,false,true,false,SALINE,Metformin
+PT-002,82,77,1.8,34,140,false,false,true,true,true,false,SALINE,Lisinopril
+PT-003,65,59,0.9,88,80,false,false,false,false,false,false,SALINE,
