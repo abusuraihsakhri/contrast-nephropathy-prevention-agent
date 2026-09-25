@@ -1,40 +1,54 @@
-name: Contrast Nephropathy Prevention Engine CI/CD & Security Verification
+name: CI
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [master, main]
   pull_request:
-    branches: [ master, main ]
+    branches: [master, main]
+
+permissions:
+  contents: read
 
 jobs:
-  test-and-audit:
+  test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
+    env:
+      AUDIT_SECRET_KEY: ci-test-only-audit-key
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install fastapi uvicorn pydantic pytest
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[server,dev]"
+          python -m pip check
 
-    - name: Run Pytest Suite
-      run: |
-        pytest -v
+      - name: Compile
+        run: python -m compileall -q cin_guard.py contrast_nephropathy_prevention_agent agents enrichment.py cli.py
 
-    - name: Security SAST & Zero-PHI Audit
-      run: |
-        python -c "
-        from agents.base import PHIGuard, AuditLogger
-        import pytest
-        assert AuditLogger.verify_integrity() is True
-        print('Security & Zero-PHI Audit Passed!')
-        "
+      - name: Test
+        run: pytest -q
+
+      - name: CLI smoke test
+        run: |
+          contrast-nephropathy-prevention-agent audit --patient-id CI-SMOKE --weight 70 --age 65 --creatinine 1.2 --egfr 55 --contrast-volume 120
+          python -c "from contrast_nephropathy_prevention_agent.server import app; assert any(r.path == '/api/evaluate' for r in app.routes)"
+
+      - name: Legacy audit integrity smoke test
+        run: |
+          python -c "from agents.base import AuditLogger; assert AuditLogger.verify_integrity() is True"
+
+      - name: Secret regression check
+        run: |
+          ! grep -R --line-number --exclude-dir=.git "contrast-nephropathy-prevention-engine-prod-audit-key-2026" .
