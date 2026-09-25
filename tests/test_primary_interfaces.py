@@ -39,8 +39,26 @@ def test_batch_cli_writes_calculated_columns(tmp_path):
 
 
 def test_server_exposes_clinical_evaluate_route():
+    from fastapi.testclient import TestClient
     from contrast_nephropathy_prevention_agent.server import app
 
     paths = {route.path for route in app.routes}
     assert "/health" in paths
     assert "/api/evaluate" in paths
+
+    response = TestClient(app).post(
+        "/api/evaluate",
+        json={
+            "patient_id": "API-TEST",
+            "weight_kg": 70,
+            "age_years": 65,
+            "serum_creatinine_mg_dl": 1.0,
+            "egfr_ml_min": 60,
+            "contrast_volume_ml": 100,
+            "medications": [],
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["patient_id"] == "API-TEST"
+    assert payload["mehran_result"]["total_score"] == 1
