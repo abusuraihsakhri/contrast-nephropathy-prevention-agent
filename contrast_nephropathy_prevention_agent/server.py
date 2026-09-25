@@ -1,58 +1,59 @@
-"""
-FastAPI REST Application & Webhooks for CIN-Guard: Contrast-Associated Acute Kidney Injury Risk & Hydration Protocol Agent.
-"""
-from typing import Dict, Any, Optional
-from .models import ClinicalCasePayload
-from .agents import CINGuardCoordinator
+"""FastAPI application exposing the canonical CA-AKI calculator."""
 
-coordinator = CINGuardCoordinator()
+from typing import List
+
 
 def create_app():
     try:
-        from fastapi import FastAPI
-        from pydantic import BaseModel
+        from fastapi import FastAPI, HTTPException
+        from pydantic import BaseModel, Field
+    except ImportError as exc:
+        raise RuntimeError('Install server dependencies with: pip install -e ".[server]"') from exc
 
-        app = FastAPI(
-            title="CIN-Guard: Contrast-Associated Acute Kidney Injury Risk & Hydration Protocol Agent",
-            description="Computes Mehran score for CA-AKI, assesses eGFR thresholds, and prescribes isotonic bicarbonate vs saline pre/post hydration protocols.",
-            version="2.0.0-PRO",
-        )
+    from cin_guard import CINGuardEngine, ValidationError
 
-        class AuditRequest(BaseModel):
-            case_id: str = "CASE-2026-001"
-            patient_synthetic_id: str = "SYNTH-PT-881"
-            primary_metric: float = 24.5
-            secondary_metric: float = 14.0
-            status_flag: str = "DISCORDANT"
-            is_stat: bool = True
-            clinical_notes: str = ""
-            biomarkers: Dict[str, Any] = {}
+    app = FastAPI(
+        title="Contrast Nephropathy Prevention Calculator",
+        description=(
+            "Research and educational calculator for the original Mehran PCI risk score, "
+            "contrast-dose heuristics, and hydration planning."
+        ),
+        version="2.1.0",
+    )
 
-        class ChatRequest(BaseModel):
-            query: str
+    class EvaluateRequest(BaseModel):
+        patient_id: str = "PT-001"
+        weight_kg: float = Field(default=70.0, gt=0)
+        age_years: int = Field(default=65, ge=0, le=150)
+        serum_creatinine_mg_dl: float = Field(default=1.2, gt=0)
+        egfr_ml_min: float = Field(default=55.0, ge=0)
+        contrast_volume_ml: float = Field(default=150.0, ge=0)
+        hypotension: bool = False
+        iabp: bool = False
+        congestive_heart_failure: bool = False
+        anemia: bool = False
+        diabetes: bool = False
+        is_urgent: bool = False
+        preferred_fluid: str = "SALINE"
+        medications: List[str] = Field(default_factory=list)
 
-        @app.get("/health")
-        def health():
-            return {"status": "HEALTHY", "system": "contrast-nephropathy-prevention-agent", "domain": "Nephrology", "version": "2.0.0-PRO"}
+    @app.get("/health")
+    def health():
+        return {
+            "status": "ok",
+            "service": "contrast-nephropathy-prevention-agent",
+            "version": "2.1.0",
+        }
 
-        @app.post("/api/audit")
-        def api_audit(req: AuditRequest):
-            payload = ClinicalCasePayload(
-                case_id=req.case_id,
-                patient_synthetic_id=req.patient_synthetic_id,
-                primary_metric=req.primary_metric,
-                secondary_metric=req.secondary_metric,
-                status_flag=req.status_flag,
-                is_stat=req.is_stat,
-                clinical_notes=req.clinical_notes,
-                biomarkers=req.biomarkers,
-            )
-            return coordinator.process_case(payload)
+    @app.post("/api/evaluate")
+    def evaluate(req: EvaluateRequest):
+        try:
+            report = CINGuardEngine.evaluate_case(**req.model_dump())
+        except ValidationError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return report.to_dict()
 
-        @app.post("/api/chat")
-        def api_chat(req: ChatRequest):
-            return {"response": coordinator.query_supervisory_chat(req.query)}
+    return app
 
-        return app
-    except ImportError:
-        return None
+
+app = create_app()

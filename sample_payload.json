@@ -1,13 +1,18 @@
 {
-  "case_id": "CASE-2026-8841",
-  "patient_synthetic_id": "SYNTH-PT-9011",
-  "primary_metric": 28.4,
-  "secondary_metric": 16.2,
-  "status_flag": "DISCORDANT",
-  "is_stat": true,
-  "clinical_notes": "Automated supervisory surveillance trigger under KDOQI Hemodialysis Adequacy & KDIGO CKD 2024 protocol.",
-  "biomarkers": {
-    "marker_alpha": "ELEVATED",
-    "concordance_score": 0.42
-  }
+  "patient_id": "PT-EXAMPLE-001",
+  "weight_kg": 70.0,
+  "age_years": 68,
+  "serum_creatinine_mg_dl": 1.3,
+  "egfr_ml_min": 52.0,
+  "contrast_volume_ml": 160.0,
+  "hypotension": false,
+  "iabp": false,
+  "congestive_heart_failure": false,
+  "anemia": false,
+  "diabetes": true,
+  "is_urgent": false,
+  "preferred_fluid": "SALINE",
+  "medications": [
+    "Metformin"
+  ]
 }

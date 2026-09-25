@@ -1,229 +1,104 @@
-# Contrast Nephropathy Prevention Agent
+# Contrast-Associated AKI Risk Calculator
 
-> **Domain:** Cardiovascular Medicine & Hemodynamic Analytics
-> **Reference Guidelines & Standards:** KDIGO 2012 / ESUR 2018 / ACC/AHA 2021 CA-AKI Prevention Guidelines
+### [Open the Live Application →](https://abusuraihsakhri.github.io/contrast-nephropathy-prevention-agent/)
 
-<div align="center">
+A small research and educational tool for calculating the original Mehran PCI contrast-nephropathy risk score, empirical contrast-dose limits, contrast/eGFR ratio, and protocol-planning outputs.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
+> **Clinical scope:** This repository is not a prescribing system and is not a substitute for clinical judgment or local policy. The original Mehran score was derived and validated in patients undergoing percutaneous coronary intervention (PCI); its absolute risk estimates should not be generalized to routine intravenous contrast-enhanced CT.
 
-</div>
+## Features
 
----
+- Original Mehran risk score with historical PCI-cohort risk bands
+- Empirical maximum contrast dose: `5 × weight (kg) / serum creatinine (mg/dL)`
+- Contrast-volume/eGFR ratio
+- Hydration schedule calculator retained for protocol comparison
+- Medication-review prompts rather than automatic stop orders
+- Single-case CLI and CSV batch processing
+- FastAPI endpoint for local/server use
+- Static browser calculator for GitHub Pages
+- Light and dark themes; browser calculations run locally
 
-## 📖 What It Does
+## Browser application
 
-**Contrast Nephropathy Prevention Agent** is a clinical decision support platform that implements:
-- **Mehran Risk Score** calculation for Contrast-Induced Nephropathy (CIN / CA-AKI)
-- **Maximum Contrast Dose** calculations (Cigarroa formula)
-- **Contrast/eGFR Ratio** safety assessment
-- **Personalized hydration protocol** generation (saline vs bicarbonate)
-- **Medication adjustment** recommendations for nephrotoxic drugs
+The GitHub Pages application performs its calculations in the browser. No patient data is sent to this repository or to an application backend.
 
----
+The web interface intentionally focuses on the risk score and contrast-dose calculations. For intravenous iodinated contrast, current ACR–NKF guidance emphasizes AKI/eGFR, volume-overload risk, clinical urgency, route of administration, and local protocol when deciding whether prophylactic IV saline is appropriate.
 
-## ⚙️ Key Capabilities & Algorithmic Modules
-
-### 🔬 Core Algorithmic & Evaluation Engines
-
-- **`MehranScoreResult`**: Mehran Risk Score assessment for Contrast-Induced Nephropathy.
-- **`ContrastDosingSafetyResult`**: Maximum contrast media volume and safety threshold calculations.
-- **`HydrationProtocol`**: Personalized pre- and post-procedure hydration regimen.
-- **`MedicationAdjustmentRecommendation`**: Recommendations for withholding nephrotoxic / renal-eliminated drugs.
-- **`CINGuardReport`**: Unified Clinical Decision Support Report for Contrast-Induced Nephropathy.
-- **`CINGuardEngine`**: Core computational engine for Contrast-Induced Nephropathy risk and prevention.
-
----
-
-## 📐 Mathematical Formulation & Logic
-
-### Mehran Risk Score
-```
-Score Points:
-  - Hypotension (SBP < 80 requiring inotropes): +5
-  - IABP: +5
-  - CHF (Class III/IV): +5
-  - Age > 75: +4
-  - Anemia: +3
-  - Diabetes: +3
-  - Contrast Volume: +1 per 100 mL
-  - Renal dysfunction (eGFR): +2 to +6 based on severity
-
-Risk Stratification:
-  - Score ≤ 5: Low risk (CIN 7.5%, Dialysis 0.04%)
-  - Score 6-10: Moderate risk (CIN 14.0%, Dialysis 0.12%)
-  - Score 11-15: High risk (CIN 26.1%, Dialysis 1.09%)
-  - Score > 15: Very High risk (CIN 57.3%, Dialysis 12.60%)
-```
-
-### Cigarroa Maximum Contrast Dose
-```
-MCD = (5 mL × Weight in kg) / Serum Creatinine (mg/dL)
-```
-
-### Contrast/eGFR Ratio
-```
-Ratio = Contrast Volume (mL) / eGFR (mL/min)
-High risk threshold: ≥ 3.7 (or ≥ 3.0 in severe CKD, eGFR < 30)
-```
-
----
-
-## 💻 Installation
+## Install
 
 ```bash
-# Clone the repository
 git clone https://github.com/abusuraihsakhri/contrast-nephropathy-prevention-agent.git
 cd contrast-nephropathy-prevention-agent
 
-# Install dependencies
-pip install -e .
-
-# For development (includes test dependencies)
-pip install -e ".[dev]"
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e ".[dev]"
 ```
 
----
+For the API server:
 
-## 💻 CLI Quickstart & Usage
-
-### 1. Guided Interactive Mode
 ```bash
-python cli.py
+python -m pip install -e ".[server]"
+contrast-nephropathy-prevention-agent serve --host 127.0.0.1 --port 8000
 ```
 
-### 2. Direct Parameterized Evaluation
-```bash
-# Using the main CIN-Guard engine
-python cin_guard.py audit --patient-id PT-001 --weight 70 --age 68 --creatinine 1.3 --egfr 52 --contrast-volume 160
+## CLI
 
-# Using the enterprise supervisor
-python cli.py audit --task-id TASK-001 --target KEY-01 --primary 28.5 --secondary 14.2
+Single case:
+
+```bash
+contrast-nephropathy-prevention-agent audit \
+  --patient-id PT-001 \
+  --weight 70 \
+  --age 68 \
+  --creatinine 1.3 \
+  --egfr 52 \
+  --contrast-volume 160 \
+  --diabetes
 ```
 
-### Parameter Reference (cin_guard.py)
-- `--patient-id`: Patient identifier
-- `--weight`: Weight in kg
-- `--age`: Age in years
-- `--creatinine`: Serum creatinine in mg/dL
-- `--egfr`: eGFR in mL/min
-- `--contrast-volume`: Contrast volume in mL
-- `--hypotension`: Flag for hypotension
-- `--iabp`: Flag for IABP support
-- `--chf`: Flag for congestive heart failure
-- `--anemia`: Flag for anemia
-- `--diabetes`: Flag for diabetes
-- `--urgent`: Flag for urgent procedure
-- `--fluid`: Fluid type (SALINE or BICARBONATE)
-- `--meds`: List of medications
-
-### Input Data Schema (Batch Processing)
-
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `case_id` | Case identifier | Required |
-| `patient_synthetic_id` | Synthetic patient identifier | Required |
-| `metric_primary` | Primary measurement value | Required |
-| `metric_secondary` | Secondary measurement value | Required |
-| `is_stat` | STAT priority flag | Required |
-| `status_flag` | Status descriptor | Required |
-
----
-
-## 🛡️ Security & Enterprise Architecture
-
-* **Zero-PHI Outbound Interceptor:** Active regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Input Validation:** Comprehensive validation of all clinical parameters with meaningful error messages.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
-
-### Security Configuration
-
-The audit trail requires a secret key to be configured via environment variable:
+Batch CSV:
 
 ```bash
-export AUDIT_SECRET_KEY="your-secure-random-key-here"
+contrast-nephropathy-prevention-agent batch -i sample.csv -o cin_results.csv
 ```
 
-**Note:** Never hardcode secret keys in production. Always use environment variables or a secure secrets manager.
+The batch input columns are demonstrated in `sample.csv`.
 
----
+## API
 
-## 🧪 Testing & Verification
+Start the server, then send a `POST` request to `/api/evaluate` using the structure in `sample_payload.json`. A health endpoint is available at `/health`.
 
-Run the automated test suite:
+The checked-in `openapi_spec.json` documents the stable request shape. FastAPI also exposes its generated interactive documentation when running locally.
+
+## Testing
 
 ```bash
-# Run pytest tests
-pytest -v
-
-# Run unittest tests
+python -m pip install -e ".[server,dev]"
+python -m pip check
+python -m compileall -q cin_guard.py contrast_nephropathy_prevention_agent
+pytest -q
 python -m unittest test_cin_guard -v
-
-# Run all tests
-pytest tests/ -v && python -m unittest test_cin_guard -v
 ```
 
-Execute high-throughput batch simulation benchmarks:
+CI runs the test suite on Python 3.10, 3.11, and 3.12.
 
-```bash
-python simulator.py --tasks 1000 --concurrency 8
-```
+## Evidence and limitations
 
----
+The repository retains the original Mehran score for compatibility and research use. That model was developed for CIN after PCI, not for general IV contrast exposure. Modern literature also distinguishes contrast-associated AKI from AKI causally attributable to contrast.
 
-## 🐳 Container Deployment
+For IV iodinated contrast, the ACR–NKF consensus recommends IV normal saline prophylaxis primarily for patients with AKI or eGFR <30 mL/min/1.73 m² when not contraindicated, with individualized consideration for selected higher-risk patients with eGFR 30–44 mL/min/1.73 m². Exact hydration rate and duration are not universal.
 
-```bash
-docker build -t contrast-nephropathy-prevention-agent .
-docker run -p 8000:8000 -e AUDIT_SECRET_KEY="your-secret-key" contrast-nephropathy-prevention-agent
-```
+References:
 
----
+- Mehran R, et al. *J Am Coll Cardiol.* 2004;44(7):1393-1399. PMID: 15464318.
+- Davenport MS, et al. ACR–NKF consensus on intravenous iodinated contrast media in kidney disease. *Radiology.* 2020;294(3):660-668. DOI: 10.1148/radiol.2019192094.
+- American College of Radiology. *Manual on Contrast Media*.
 
-## 📁 Project Structure
+## Technology
 
-```
-contrast-nephropathy-prevention-agent/
-├── agents/                          # Enterprise agent framework
-│   ├── __init__.py
-│   ├── api.py                       # FastAPI REST server
-│   ├── base.py                      # Security, PHI guard, audit trail
-│   ├── learning.py                  # Bayesian calibration engine
-│   ├── llm_factory.py               # LLM provider factory
-│   ├── metrics.py                   # Prometheus metrics
-│   ├── models.py                    # Pydantic data models
-│   ├── streamer.py                  # WebSocket telemetry
-│   ├── supervisor.py                # Supervisor orchestrator
-│   └── workers.py                   # Specialized worker agents
-├── contrast_nephropathy_prevention_agent/  # Alternative package structure
-│   ├── __init__.py
-│   ├── agents.py                    # Coordinator and sub-agents
-│   ├── cli.py                       # CLI interface
-│   ├── engine.py                    # Clinical domain engine
-│   ├── models.py                    # Data models
-│   └── server.py                    # FastAPI application
-├── tests/                           # Pytest test suite
-│   ├── test_contrast_nephropathy_prevention_agent.py
-│   └── test_enrichment.py
-├── cin_guard.py                     # Main CIN-Guard engine (standalone)
-├── cli.py                           # Enterprise CLI
-├── enrichment.py                    # Enrichment feature engines
-├── simulator.py                     # High-throughput simulator
-├── test_cin_guard.py                # Unittest suite for CIN-Guard
-├── pyproject.toml                   # Project configuration
-├── Dockerfile                       # Container definition
-└── docker-compose.yml               # Multi-container orchestration
-```
+Python 3.10+, standard-library clinical engine, optional FastAPI/Uvicorn server, and a dependency-free static web application.
 
----
+## License
 
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT. See [LICENSE](LICENSE).
