@@ -1,7 +1,5 @@
 """FastAPI application exposing the canonical CA-AKI calculator."""
 
-from __future__ import annotations
-
 from typing import List
 
 
