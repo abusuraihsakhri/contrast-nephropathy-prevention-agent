@@ -4,7 +4,7 @@ CIN-Guard: Contrast-Associated Acute Kidney Injury Risk & Hydration Protocol Eng
 -----------------------------------------------------------------------------------
 Calculates Mehran 1.0 & 2.0 Risk Scores for Contrast-Induced Nephropathy (CIN / CA-AKI),
 computes Maximum Contrast Dose (Cigarroa/Gurm formulas), evaluates Contrast Volume/eGFR ratio,
-and prescribes personalized isotonic crystalloid / sodium bicarbonate hydration protocols.
+and generates contrast-dose and hydration-planning estimates for research and educational use.
 
 Domain: Nephrology / Interventional Cardiology & Radiology
 Guidelines: KDIGO 2012 / ESUR 2018 / ACC/AHA 2021 CA-AKI Prevention Guidelines
@@ -289,10 +289,12 @@ class CINGuardEngine:
         preferred_fluid: str = "SALINE",  # 'SALINE' or 'BICARBONATE'
     ) -> HydrationProtocol:
         """
-        Generate evidence-based KDIGO/ESUR pre- and post-procedure hydration protocols.
-        Standard Saline: 1.0 mL/kg/h for 12h pre & 12h post (or reduced to 0.5 mL/kg/h in CHF).
-        Urgent Saline: 3.0 mL/kg/h for 1-2h pre & 1.5 mL/kg/h for 4-6h post.
-        Bicarbonate (154 mEq/L): 3.0 mL/kg/h for 1h pre & 1.0 mL/kg/h for 6h post.
+        Generate a deterministic hydration schedule estimate.
+
+        The rates below are retained as protocol-calculation examples for compatibility.
+        They are not a universal prescription. Current contrast guidance emphasizes
+        individualization by route of administration, AKI/eGFR status, volume-overload
+        risk, urgency, and local protocol.
         """
         _validate_positive_number(weight_kg, "weight_kg")
         if preferred_fluid.upper() not in ("SALINE", "BICARBONATE"):
@@ -342,7 +344,10 @@ class CINGuardEngine:
 
     @staticmethod
     def audit_medications(current_medications: List[str]) -> List[MedicationAdjustmentRecommendation]:
-        """Audit active medications for contrast-interaction nephrotoxicity."""
+        """Return medication review prompts related to kidney risk around contrast exposure.
+
+        These are review prompts, not automatic medication stop orders.
+        """
         recommendations = []
         meds_lower = [m.lower() for m in current_medications]
 
@@ -350,8 +355,8 @@ class CINGuardEngine:
         if any("metformin" in m or "glucophage" in m for m in meds_lower):
             recommendations.append(MedicationAdjustmentRecommendation(
                 drug_name="Metformin",
-                action="HOLD_DAY_OF",
-                rationale="Withhold at time of procedure and for 48 hours post-procedure until renal function verified stable.",
+                action="REVIEW_RENAL_FUNCTION",
+                rationale="Metformin is not itself nephrotoxic. Follow current ACR/FDA and local policy; withholding is mainly relevant with AKI, severe kidney dysfunction, or selected arterial catheter studies.",
             ))
 
         # NSAIDs
@@ -360,8 +365,8 @@ class CINGuardEngine:
             if any(nsaid in m for nsaid in nsaids):
                 recommendations.append(MedicationAdjustmentRecommendation(
                     drug_name=m.title(),
-                    action="HOLD_48H_PRE",
-                    rationale="Withhold NSAID 48 hours prior to contrast to avoid renal prostaglandin synthesis inhibition.",
+                    action="CONSIDER_HOLD_IF_HIGH_RISK",
+                    rationale="In patients with AKI or severe CKD, consider withholding nonessential NSAIDs when clinically feasible; do not apply this as an automatic 48-hour rule.",
                 ))
 
         # ACE inhibitors / ARBs
@@ -370,8 +375,8 @@ class CINGuardEngine:
             if any(r in m for r in raas):
                 recommendations.append(MedicationAdjustmentRecommendation(
                     drug_name=m.title(),
-                    action="HOLD_DAY_OF",
-                    rationale="Consider holding on morning of procedure to prevent efferent arteriolar vasodilation-induced GFR drop.",
+                    action="INDIVIDUALIZE",
+                    rationale="Evidence for routine ACE inhibitor/ARB withholding is mixed. Individualize based on kidney risk, blood pressure, hyperkalemia risk, and local protocol.",
                 ))
 
         # Aminoglycosides / Vancomycin
@@ -380,8 +385,8 @@ class CINGuardEngine:
             if any(t in m for t in toxic):
                 recommendations.append(MedicationAdjustmentRecommendation(
                     drug_name=m.title(),
-                    action="MONITOR",
-                    rationale="Concurrent nephrotoxin; obtain trough levels and delay non-urgent contrast if possible.",
+                    action="REVIEW_NEPHROTOXIN",
+                    rationale="Concurrent nephrotoxin: review necessity, renal dosing, and therapeutic levels, especially in AKI or severe CKD.",
                 ))
 
         return recommendations
@@ -438,9 +443,9 @@ class CINGuardEngine:
 
         # Post-procedure monitoring guidance
         monitoring = [
-            "Re-check serum creatinine and eGFR at 48 hours and 72 hours post-contrast.",
-            "Monitor strict urine output (> 0.5 mL/kg/h target for 24h).",
-            "Avoid repeat iodinated contrast within 48-72 hours if clinically feasible.",
+            "Arrange post-contrast kidney-function follow-up when clinically indicated; higher-risk patients may warrant reassessment within 48-72 hours.",
+            "Monitor urine output and volume status when clinically relevant, especially in AKI or hemodynamic instability.",
+            "Avoid unnecessary closely repeated iodinated contrast exposures; balance delay against the diagnostic or procedural indication.",
         ]
 
         # Overall Status
@@ -539,15 +544,69 @@ def main(argv=None):
     elif args.command == "chat":
         q = " ".join(args.query).lower()
         if "hydration" in q or "protocol" in q:
-            print("KDIGO/ESUR Standard: 0.9% Saline 1.0 mL/kg/h for 12h pre & 12h post, or Bicarbonate 3 mL/kg/h 1h pre + 1 mL/kg/h 6h post.")
+            print("ACR-NKF guidance for IV iodinated contrast favors individualized isotonic saline prophylaxis for AKI or eGFR <30 mL/min/1.73 m² when not contraindicated; typical regimens start about 1 hour before and continue 3-12 hours after.")
         elif "mehran" in q or "score" in q:
-            print("Mehran Score assesses: Hypotension (+5), IABP (+5), CHF (+5), Age>75 (+4), Anemia (+3), Diabetes (+3), Contrast Vol (+1/100mL), eGFR impairment (up to +6).")
+            print("The original Mehran score was developed for PCI and uses hypotension, IABP, CHF, age >75, anemia, diabetes, contrast volume, and renal dysfunction. Do not generalize its absolute risk estimates to routine IV contrast CT.")
         else:
-            print("CIN-Guard Engine Active. Ready for clinical contrast AKI risk and hydration scheduling.")
+            print("Calculator ready. Outputs are research/educational decision-support estimates and require clinical context.")
         return 0
 
     elif args.command == "batch":
-        print(f"Batch processing {args.input} -> {args.output}")
+        def parse_bool(value: Any) -> bool:
+            return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+        with open(args.input, mode="r", encoding="utf-8-sig", newline="") as src:
+            reader = csv.DictReader(src)
+            rows = list(reader)
+
+        output_rows = []
+        for row in rows:
+            medications = [
+                item.strip()
+                for item in str(row.get("medications", "")).split(";")
+                if item.strip()
+            ]
+            report = CINGuardEngine.evaluate_case(
+                patient_id=row.get("patient_id") or "PT-UNKNOWN",
+                weight_kg=float(row.get("weight_kg") or 70.0),
+                age_years=int(row.get("age_years") or 65),
+                serum_creatinine_mg_dl=float(row.get("serum_creatinine_mg_dl") or 1.2),
+                egfr_ml_min=float(row.get("egfr_ml_min") or 55.0),
+                contrast_volume_ml=float(row.get("contrast_volume_ml") or 150.0),
+                hypotension=parse_bool(row.get("hypotension", False)),
+                iabp=parse_bool(row.get("iabp", False)),
+                congestive_heart_failure=parse_bool(row.get("congestive_heart_failure", False)),
+                anemia=parse_bool(row.get("anemia", False)),
+                diabetes=parse_bool(row.get("diabetes", False)),
+                is_urgent=parse_bool(row.get("is_urgent", False)),
+                preferred_fluid=(row.get("preferred_fluid") or "SALINE").upper(),
+                medications=medications,
+            )
+            output_rows.append({
+                **row,
+                "mehran_score": report.mehran_result.total_score,
+                "risk_category": report.mehran_result.risk_category,
+                "max_contrast_dose_ml": report.contrast_safety.max_contrast_dose_cigarroa_ml,
+                "contrast_egfr_ratio": report.contrast_safety.contrast_egfr_ratio,
+                "contrast_safety": report.contrast_safety.safety_verdict,
+                "overall_risk_status": report.overall_risk_status,
+            })
+
+        fieldnames = list(reader.fieldnames or [])
+        extra = [
+            "mehran_score",
+            "risk_category",
+            "max_contrast_dose_ml",
+            "contrast_egfr_ratio",
+            "contrast_safety",
+            "overall_risk_status",
+        ]
+        with open(args.output, mode="w", encoding="utf-8", newline="") as dst:
+            writer = csv.DictWriter(dst, fieldnames=fieldnames + extra)
+            writer.writeheader()
+            writer.writerows(output_rows)
+
+        print(f"Batch processed {len(output_rows)} records -> {args.output}")
         return 0
 
 
