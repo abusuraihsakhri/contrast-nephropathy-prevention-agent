@@ -1,113 +1,61 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Contrast Nephropathy Prevention Engine API",
-    "description": "Enterprise Distributed Component Platform (Clinical & Cryptographic AI) adhering to CAP / CLSI / NIST Standards.",
-    "version": "3.0.0-ENTERPRISE",
-    "contact": {
-      "name": "Dr. Abu Suraih Sakhri",
-      "url": "https://github.com/abusuraihsakhri"
-    }
+    "title": "Contrast Nephropathy Prevention Calculator API",
+    "version": "2.1.0",
+    "description": "Research and educational API for the original Mehran PCI risk score, contrast-dose heuristics, and hydration planning."
   },
   "paths": {
     "/health": {
       "get": {
-        "summary": "Health and metadata check",
+        "summary": "Health check",
         "responses": {
           "200": {
-            "description": "System optimal"
+            "description": "Service status"
           }
         }
       }
     },
-    "/metrics": {
-      "get": {
-        "summary": "Prometheus operational metrics",
-        "responses": {
-          "200": {
-            "description": "Prometheus text metrics"
-          }
-        }
-      }
-    },
-    "/api/audit": {
+    "/api/evaluate": {
       "post": {
-        "summary": "Dispatch task payload across specialized workers",
+        "summary": "Evaluate a contrast-exposure case",
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "properties": {
-                  "task_id": {
-                    "type": "string"
-                  },
-                  "target_identifier": {
-                    "type": "string"
-                  },
-                  "primary_metric": {
-                    "type": "number"
-                  },
-                  "secondary_metric": {
-                    "type": "number"
-                  },
-                  "status_descriptor": {
-                    "type": "string"
-                  },
-                  "is_critical_flag": {
-                    "type": "boolean"
-                  }
-                },
                 "required": [
-                  "task_id",
-                  "target_identifier",
-                  "primary_metric"
-                ]
+                  "patient_id",
+                  "weight_kg",
+                  "age_years",
+                  "serum_creatinine_mg_dl",
+                  "egfr_ml_min",
+                  "contrast_volume_ml"
+                ],
+                "properties": {
+                  "patient_id": {"type": "string"},
+                  "weight_kg": {"type": "number", "exclusiveMinimum": 0},
+                  "age_years": {"type": "integer", "minimum": 0, "maximum": 150},
+                  "serum_creatinine_mg_dl": {"type": "number", "exclusiveMinimum": 0},
+                  "egfr_ml_min": {"type": "number", "minimum": 0},
+                  "contrast_volume_ml": {"type": "number", "minimum": 0},
+                  "hypotension": {"type": "boolean", "default": false},
+                  "iabp": {"type": "boolean", "default": false},
+                  "congestive_heart_failure": {"type": "boolean", "default": false},
+                  "anemia": {"type": "boolean", "default": false},
+                  "diabetes": {"type": "boolean", "default": false},
+                  "is_urgent": {"type": "boolean", "default": false},
+                  "preferred_fluid": {"type": "string", "enum": ["SALINE", "BICARBONATE"]},
+                  "medications": {"type": "array", "items": {"type": "string"}}
+                }
               }
             }
           }
         },
         "responses": {
-          "200": {
-            "description": "Consensus dossier with HMAC signature"
-          }
-        }
-      }
-    },
-    "/api/chat": {
-      "post": {
-        "summary": "Air-gapped supervisory conversational assistant",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "query": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "query"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Supervisory response"
-          }
-        }
-      }
-    },
-    "/api/audit/logs": {
-      "get": {
-        "summary": "Retrieve and cryptographically verify HMAC audit trail",
-        "responses": {
-          "200": {
-            "description": "Cryptographic audit trail"
-          }
+          "200": {"description": "Calculated report"},
+          "422": {"description": "Invalid input"}
         }
       }
     }
