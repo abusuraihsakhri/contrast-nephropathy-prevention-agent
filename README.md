@@ -97,7 +97,7 @@ References:
 
 ## Technology
 
-Python 3.9+, standard-library clinical engine, optional FastAPI/Uvicorn server, and a dependency-free static web application.
+Python 3.10+, standard-library clinical engine, optional FastAPI/Uvicorn server, and a dependency-free static web application.
 
 ## License
 
